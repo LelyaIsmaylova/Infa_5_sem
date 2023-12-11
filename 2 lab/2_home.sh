@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 cd ~
 mkdir -p hello_home
 cd hello_home
