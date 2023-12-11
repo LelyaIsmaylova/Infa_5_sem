@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 mkdir -p hello_current
 touch current.txt   
 echo "Hello current!!" > current.txt
