@@ -1,10 +1,8 @@
 from itertools import combinations, combinations_with_replacement
 
-def get_combinations(s, n):
-    result = []
-    for k in range(1, n + 1):
-        for combo in combinations(s, k):
-            result.append(''.join(combo))
+def get_combinations_with_r(s, n):
+    result = list(combinations_with_replacement(s, n))
+    result = [''.join(item) for item in result]
     print(result)
 
-get_combinations("doctor", 2)
+get_combinations_with_r("doctor", 2)
