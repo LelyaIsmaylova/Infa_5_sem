@@ -1,51 +1,176 @@
-from itertools import product, permutations, combinations, combinations_with_replacement, groupby
+import pygame
+import random
+import math
 
-def get_cartesian_product(a, b):
-    return list(product(a, b))
-
-result = get_cartesian_product([1, 2], [3, 4])
-print(result)
+SCREEN_DIM = (800, 600)
 
 
-def get_permutations(s, n):
-    result = [''.join(p) for p in permutations(s, n)]
-    result.sort()
-    print(result)
+class Vec2d:
+    def init(self, x, y):
+        self.x = x
+        self.y = y
 
-get_permutations("doctor", 2)
+    def add(self, other):
+        return Vec2d(self.x + other.x, self.y + other.y)
 
+    def sub(self, other):
+        return Vec2d(self.x - other.x, self.y - other.y)
 
-def get_combinations(s, n):
-    result = []
-    for k in range(1, n + 1):
-        for combo in combinations(s, k):
-            result.append(''.join(combo))
-    print(result)
+    def mul(self, scalar):
+        return Vec2d(self.x * scalar, self.y * scalar)
 
-get_combinations("doctor", 2)
+    def len(self):
+        return math.sqrt(self.x  2 + self.y  2)
 
+    def int_pair(self):
+        return int(self.x), int(self.y)
 
-def get_combinations_with_r(s, n):
-    result = list(combinations_with_replacement(s, n))
-    result = [''.join(item) for item in result]
-    print(result)
-
-get_combinations_with_r("doctor", 2)
+    def str(self):
+        return f"Vec2d({self.x}, {self.y})"
 
 
-def compress_string(s):
-    compressed = [(len(list(group)), int(key)) for key, group in groupby(s)]
-    print(compressed)
+class Polyline:
+    def init(self):
+        self.points = []
+        self.speeds = []
 
-compress_string('12345')
+    def add_point(self, point, speed):
+        self.points.append(point)
+        self.speeds.append(speed)
+
+    def set_points(self):
+        self.points = [point + speed for point, speed in zip(self.points, self.speeds)]
+        for p in range(len(self.points)):
+            if self.points[p].x > SCREEN_DIM[0] or self.points[p].x < 0:
+                self.speeds[p] = Vec2d(-self.speeds[p].x, self.speeds[p].y)
+            if self.points[p].y > SCREEN_DIM[1] or self.points[p].y < 0:
+                self.speeds[p] = Vec2d(self.speeds[p].x, -self.speeds[p].y)
+
+    def draw_points(self, game_display, style="points", width=3, color=(255, 255, 255)):
+        if not self.points:
+            return
+
+        if style == "line":
+            for p_n in range(-1, len(self.points) - 1):
+                pygame.draw.line(game_display, color,
+                                 self.points[p_n].int_pair(),
+                                 self.points[p_n + 1].int_pair(), width)
+
+        elif style == "points":
+            for p in self.points:
+                pygame.draw.circle(game_display, color,
+                                   p.int_pair(), width)
 
 
-def maximize(lists, m):
-    max_result = 0
-    for combo in product(*lists):
-        result = sum(x**2 for x in combo) % m
-        max_result = max(max_result, result)
-    print(max_result)
-  
-lists = [[1, 2], [3, 4, 5], [6, 7, 8, 9, 10]]
-maximize(lists, m=100)
+class Knot(Polyline):
+    def get_knot(self, count):
+        if len(self.points) < 3:
+            return []
+
+        res = []
+        for i in range(-2, len(self.points) - 2):
+            ptn = [
+                (self.points[i] + self.points[i + 1]) * 0.5,
+                self.points[i + 1],
+                (self.points[i + 1] + self.points[i + 2]) * 0.5
+            ]
+            res.extend(self.get_points(ptn, count))
+        return res
+
+
+class MyScreenSaver:
+    def init(self):
+        pygame.init()
+        self.game_display = pygame.display.set_mode(SCREEN_DIM)
+        pygame.display.set_caption("MyScreenSaver")
+
+        self.steps = 35
+        self.working = True
+        self.knot = Knot()
+        self.show_help = False
+        self.pause = True
+
+        self.hue = 0
+        self.color = pygame.Color(0)
+
+    def run(self):
+        while self.working:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.working = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.working = False
+                    if event.key == pygame.K_r:
+                        self.knot = Knot()
+                        self.pause = True
+                    if event.key == pygame.K_p:
+                        self.pause = not self.pause
+                    if event.key == pygame.K_KP_PLUS:
+                        self.steps += 1
+                    if event.key == pygame.K_KP_MINUS:
+                        self.steps -= 1 if self.steps > 1 else 0
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_KP_PLUS:
+                        self.steps += 1
+                    if event.key == pygame.K_KP_MINUS:
+                        self.steps -= 1 if self.steps > 1 else 0
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = Vec2d(*event.pos)
+                    speed = Vec2d(random.random() * 2, random.random() * 2)
+                    self.knot.add_point(mouse_pos, speed)
+
+            self.game_display.fill((0, 0, 0))
+            self.hue = (self.hue + 1) % 360
+            self.color.hsla = (self.hue, 100, 50, 100)
+
+if not self.pause:
+                self.knot.set_points()
+
+            if self.knot.points:
+                self.knot.draw_points(self.game_display, "line", 3, self.color)
+
+            if self.show_help:
+                self.draw_help()
+
+            pygame.display.flip()
+
+        pygame.display.quit()
+        pygame.quit()
+        exit(0)
+
+    def draw_help(self):
+        self.game_display.fill((50, 50, 50))
+        font1 = pygame.font.SysFont("courier", 24)
+        font2 = pygame.font.SysFont("serif", 24)
+        data = [
+            ["F1", "Show Help"],
+            ["R", "Restart"],
+            ["P", "Pause/Play"],
+            ["Num+", "More points"],
+            ["Num-", "Less points"],
+            ["", ""],
+            [str(self.steps), "Current points"]
+        ]
+
+        pygame.draw.lines(self.game_display, (255, 50, 50, 255), True, [
+            (0, 0), (800, 0), (800, 600), (0, 600)], 5)
+
+        x_pos = 100
+        y_pos = 100
+        line_spacing = 30
+
+        for text in data:
+            self.game_display.blit(font1.render(
+                text[0], True, (128, 128, 255)), (x_pos, y_pos))
+            self.game_display.blit(font2.render(
+                text[1], True, (128, 128, 255)), (x_pos + 100, y_pos))
+            y_pos += line_spacing
+
+        pygame.display.flip()
+
+
+if name == "main":
+    screen_saver = MyScreenSaver()
+    screen_saver.run()
